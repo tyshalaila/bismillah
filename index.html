@@ -257,9 +257,9 @@
   <div class="auth-card">
     <span class="step-label">Langkah 1 dari 2</span>
     <h2>Verifikasi email institusi</h2>
-    <p class="desc">Gunakan email Institusi ITS kamu (<span class="mono">@student.its.ac.id</span>) untuk memverifikasi bahwa kamu bagian dari civitas akademika ITS.</p>
+    <p class="desc">Gunakan email Institusi ITS kamu (<span class="mono">@student.its.ac.id</span> atau <span class="mono">@its.ac.id</span>) untuk memverifikasi bahwa kamu bagian dari civitas akademika ITS.</p>
     <div class="field"><label>Email institusi</label><input type="email" id="input-email" placeholder="nama.mahasiswa@student.its.ac.id">
-      <div class="err-msg" id="err-email">Email harus pakai domain @student.its.ac.id ya.</div></div>
+      <div class="err-msg" id="err-email">Email harus pakai domain @student.its.ac.id atau @its.ac.id ya.</div></div>
     <button class="btn btn-primary" style="width:100%" onclick="checkEmail()">Lanjut</button>
     <div class="auth-foot"><button class="link-btn" onclick="showApp()">← Kembali</button><span></span></div>
   </div>
@@ -272,7 +272,7 @@
     <h2>Pilih jalur masuk</h2>
     <div style="display:flex;gap:8px;margin:12px 0 16px">
       <button class="btn btn-ghost btn-sm" id="lm-b-pengurus" onclick="setLoginMode('pengurus')" style="flex:1">Pengurus BEM</button>
-      <button class="btn btn-ghost btn-sm" id="lm-b-request" onclick="setLoginMode('request')" style="flex:1">Akses dari Request</button>
+      <button class="btn btn-ghost btn-sm" id="lm-b-request" onclick="setLoginMode('request')" style="flex:1">Warga ITS / Request</button>
     </div>
     <div id="lm-pengurus">
       <p class="desc">Masukkan NRP dan nama sesuai data kepengurusan. Sistem mencocokkannya dengan daftar pengurus aktif.</p>
@@ -281,7 +281,7 @@
       <button class="btn btn-primary" style="width:100%" onclick="checkWhitelist()">Buka Dashboard</button>
     </div>
     <div id="lm-request" class="hidden">
-      <p class="desc">Untuk pemohon yang <b>Request Database Alumni</b>-nya sudah disetujui. Kode verifikasi dikirim ke email di langkah 1, dan akses hanya berlaku selama periode yang disetujui.</p>
+      <p class="desc">Untuk Warga Vokasi/ITS. Kode verifikasi dikirim ke email di langkah 1. Kamu bisa melihat daftar alumni tanpa data pribadi, dan data lengkap hanya kalau Request Database Alumni-mu sudah disetujui (selama periode yang disetujui).</p>
       <button class="btn btn-ghost" style="width:100%;margin-bottom:12px" onclick="sendOtp()">Kirim kode ke email</button>
       <div class="field"><label>Kode 6 digit</label><input type="text" id="input-otp" inputmode="numeric" maxlength="6" placeholder="••••••"></div>
       <button class="btn btn-primary" style="width:100%" onclick="verifyOtp()">Masuk</button>
@@ -449,11 +449,11 @@
 <script>
 /* Data individu alumni & daftar pengurus TIDAK ada di file ini. Dilayani backend (lihat Code.gs).
    Yang tertanam hanya data agregat (jumlah), aman untuk publik. */
-const API_URL = 'https://script.google.com/macros/s/AKfycbwhVF2dnmFM5YK42q9kGGiwrSi-3CSy0-T9d1Y9DPQieDfzWP-hCagBtB0-H432nXCdHQ/exec';
+const API_URL = "https://script.google.com/macros/s/AKfycby0aw2mdjfEUIbYTdcyJLZLh6uidcS4aV0lBaNzK8DeVoGMFANWNsqRAI0K8KtaE847Ug/exec";
 const REQUEST_URL = "https://its.id/m/FormulirPermintaanDatabaseAlumni";
-const AGG = {"total":68,"bekerja":51,"magangOnly":16,"belum":1,"instansi":146,"depts":[{"name":"Departemen Teknik Infrastruktur Sipil","total":19,"bekerja":16,"magang":19},{"name":"Departemen Teknik Instrumentasi","total":7,"bekerja":4,"magang":6},{"name":"Departemen Teknik Elektro Otomasi","total":10,"bekerja":6,"magang":10},{"name":"Departemen Statistika Bisnis","total":9,"bekerja":7,"magang":8},{"name":"Departemen Teknik Kimia Industri","total":14,"bekerja":11,"magang":14},{"name":"Departemen Teknik Mesin Industri","total":9,"bekerja":7,"magang":9}],"companies":[["PT PLN (Persero)",4],["PT Pertamina Gas",1],["Bank Mandiri",1],["PT Honda Prospect Motor",1],["PT OTE Engineering Indonesia",1]]};
+const AGG = {"total":72,"bekerja":55,"magangOnly":16,"belum":1,"instansi":154,"depts":[{"name":"Departemen Statistika Bisnis","total":10,"bekerja":8,"magang":8},{"name":"Departemen Teknik Elektro Otomasi","total":11,"bekerja":7,"magang":11},{"name":"Departemen Teknik Infrastruktur Sipil","total":20,"bekerja":17,"magang":20},{"name":"Departemen Teknik Instrumentasi","total":7,"bekerja":4,"magang":6},{"name":"Departemen Teknik Kimia Industri","total":15,"bekerja":12,"magang":15},{"name":"Departemen Teknik Mesin Industri","total":9,"bekerja":7,"magang":9}],"companies":[["PT PLN (Persero)",5],["PT Pertamina Gas",1],["Bank Mandiri",0],["PT Honda Prospect Motor",1],["PT OTE Engineering Indonesia",1]]};
 
-const EMAIL_DOMAIN = "@student.its.ac.id";
+const EMAIL_DOMAINS = ["@student.its.ac.id", "@its.ac.id"];
 let session = null;
 let pendingEmail = "";
 const accessLog = [];
@@ -466,7 +466,7 @@ function goTo(id){
 function checkEmail(){
   const val = document.getElementById('input-email').value.trim().toLowerCase();
   const errEl = document.getElementById('err-email');
-  if(!val.endsWith(EMAIL_DOMAIN)){ errEl.classList.add('show'); return; }
+  if(!EMAIL_DOMAINS.some(d => val.endsWith(d))){ errEl.classList.add('show'); return; }
   errEl.classList.remove('show'); pendingEmail = val; goTo('screen-login-nrp'); setLoginMode('pengurus');
 }
 function normalize(s){ return (s||'').trim().toLowerCase().replace(/\s+/g,' '); }
@@ -476,7 +476,7 @@ async function api(payload){
   const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ ...payload, token: sessionToken }) });
   return res.json();
 }
-const LOGIN_ERR = { not_found:'NRP / nama nggak cocok sama daftar pengurus.', inactive:'Status kepengurusan kamu tidak aktif.', bad_email:'Email harus @student.its.ac.id.', too_many:'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', bad_code:'Kode salah atau sudah kedaluwarsa.', no_access:'Tidak ada akses request yang sedang aktif untuk email ini.', no_backend:'Backend belum dikonfigurasi (API_URL kosong).' };
+const LOGIN_ERR = { not_found:'NRP / nama nggak cocok sama daftar pengurus.', inactive:'Status kepengurusan kamu tidak aktif.', bad_email:'Email harus @student.its.ac.id atau @its.ac.id.', too_many:'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', bad_code:'Kode salah atau sudah kedaluwarsa.', no_backend:'Backend belum dikonfigurasi (API_URL kosong).' };
 function setLoginMode(m){
   document.getElementById('lm-pengurus').classList.toggle('hidden', m!=='pengurus');
   document.getElementById('lm-request').classList.toggle('hidden', m!=='request');
@@ -517,18 +517,20 @@ function showApp(){
 }
 function logout(){ session = null; sessionToken = null; showApp(); }
 function lockNote(kind){
-  const msg = kind==='staff' ? 'Akun kamu belum memiliki akses data individu.<br>Hubungi admin dashboard kalau butuh akses.'
-    : kind==='error' ? 'Data alumni gagal dimuat. Coba login ulang.'
-    : '<b>Data alumni individu bersifat terbatas.</b><br>Data individu hanya dapat diakses pihak yang memiliki kewenangan.<br>Untuk meminta data alumni, silakan melalui prosedur resmi.';
-  const btn = kind==='public' ? `<a class="btn btn-primary btn-sm" style="display:inline-block;text-decoration:none;margin-top:16px" href="${REQUEST_URL}" target="_blank" rel="noopener">Request Database Alumni</a>` : '';
-  return `<div class="lock-note"><div class="icon">🔒</div><div>${msg}</div>${btn}</div>`;
+  if(kind==='error') return '<div class="lock-note"><div class="icon">🔒</div><div>Data alumni gagal dimuat. Coba login ulang.</div></div>';
+  return `<div class="lock-note"><div class="icon">🔒</div><div><b>Daftar alumni khusus Warga Vokasi/ITS.</b><br>Masuk dengan email ITS untuk melihat daftar alumni <b>tanpa data pribadi</b>.<br>Data individu lengkap hanya lewat prosedur Request Database Alumni.</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+      <button class="btn btn-primary btn-sm" onclick="goTo('screen-login-email')">Masuk dengan email ITS</button>
+      <a class="btn btn-ghost btn-sm" style="display:inline-block;text-decoration:none" href="${REQUEST_URL}" target="_blank" rel="noopener">Request Database Alumni</a></div></div>`;
 }
+const VIEW_TITLE = { lengkap:'Database Alumni', terbatas:'Database Alumni (tanpa data kontak)', umum:'Daftar Alumni (tanpa data pribadi)' };
 async function loadAlumni(){
   try {
     const r = await api({ action:'alumni' });
     if(!r.ok) throw new Error(r.reason);
+    document.getElementById('table-title').innerHTML = `<span class="dot" style="background:var(--teal)"></span>${VIEW_TITLE[r.view] || 'Daftar Alumni'}`;
     renderTable(r.data);
-    accessLog.unshift({ nama: session.nama, waktu: new Date().toLocaleTimeString('id-ID'), aksi: 'Membuka database alumni' });
+    accessLog.unshift({ nama: session.nama, waktu: new Date().toLocaleTimeString('id-ID'), aksi: 'Membuka ' + (VIEW_TITLE[r.view] || 'daftar alumni') });
   } catch(e){ document.getElementById('table-content').innerHTML = lockNote('error'); }
 }
 function applySession(){
@@ -724,21 +726,30 @@ function renderGlobe(){
 }
 
 /* ---------- table ---------- */
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function renderTable(data){
-  const rows = data.map(a => `<tr><td><b>${a.nama}</b></td><td><span class="dept-tag">${a.departemen.replace('Departemen ','')}</span></td><td class="muted-cell">${a.magang}</td><td class="muted-cell">${a.kerja}</td></tr>`).join('');
+  const has = k => data.length && Object.prototype.hasOwnProperty.call(data[0], k);
+  const cols = [['nama','Nama'],['departemen','Departemen'],['magang','Magang'],['kerja','Kerja'],['posisi','Posisi'],['nrp','NRP'],['no. whatsapp','WhatsApp'],['linkedin','LinkedIn']].filter(([k]) => k==='nama' || has(k));
+  const cell = (a,k) => {
+    const v = esc(a[k]);
+    if(k==='nama') return `<td><b>${v}</b></td>`;
+    if(k==='departemen') return `<td><span class="dept-tag">${v.replace('Departemen ','')}</span></td>`;
+    if(k==='linkedin') return /^https?:\/\//i.test(String(a[k])) ? `<td class="muted-cell"><a href="${v}" target="_blank" rel="noopener">buka</a></td>` : `<td class="muted-cell">${v}</td>`;
+    return `<td class="muted-cell">${v}</td>`;
+  };
+  const rowsHtml = list => list.map(a => `<tr>${cols.map(([k]) => cell(a,k)).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="muted-cell" style="text-align:center;padding:20px;">Nggak ketemu.</td></tr>`;
   document.getElementById('table-content').innerHTML = `
     <div class="search-bar">
       <input type="text" id="search-input" placeholder="Cari nama alumni...">
       <select id="filter-dept"><option value="">Semua departemen</option></select>
     </div>
-    <div class="table-scroll"><table><thead><tr><th>Nama</th><th>Departemen</th><th>Magang</th><th>Kerja</th></tr></thead><tbody id="table-body">${rows}</tbody></table></div>`;
+    <div class="table-scroll"><table><thead><tr>${cols.map(([,t]) => `<th>${t}</th>`).join('')}</tr></thead><tbody id="table-body">${rowsHtml(data)}</tbody></table></div>`;
   const deptSelect = document.getElementById('filter-dept');
-  [...new Set(data.map(a=>a.departemen))].forEach(d => { const opt=document.createElement('option'); opt.value=d; opt.textContent=d.replace('Departemen ',''); deptSelect.appendChild(opt); });
+  [...new Set(data.map(a=>a.departemen))].forEach(d => { const opt=document.createElement('option'); opt.value=d; opt.textContent=String(d).replace('Departemen ',''); deptSelect.appendChild(opt); });
   function applyFilter(){
     const q = normalize(document.getElementById('search-input').value);
     const dept = document.getElementById('filter-dept').value;
-    const filtered = data.filter(a => normalize(a.nama).includes(q) && (dept === '' || a.departemen === dept));
-    document.getElementById('table-body').innerHTML = filtered.map(a => `<tr><td><b>${a.nama}</b></td><td><span class="dept-tag">${a.departemen.replace('Departemen ','')}</span></td><td class="muted-cell">${a.magang}</td><td class="muted-cell">${a.kerja}</td></tr>`).join('') || `<tr><td colspan="4" class="muted-cell" style="text-align:center;padding:20px;">Nggak ketemu.</td></tr>`;
+    document.getElementById('table-body').innerHTML = rowsHtml(data.filter(a => normalize(a.nama).includes(q) && (dept === '' || a.departemen === dept)));
   }
   document.getElementById('search-input').addEventListener('input', applyFilter);
   document.getElementById('filter-dept').addEventListener('change', applyFilter);
@@ -811,12 +822,10 @@ function renderApp(){
     return `<div class="company-card"><div class="company-badge"><img src="data:image/png;base64,${c.logo}" alt="${c.name}"></div><div class="cname" title="${c.name}">${c.name}</div><div class="ccat">${c.category}</div><div class="ccount">${count} alumni</div></div>`;
   }).join('');
 
-  // tabel individu: hanya internal berwenang, datanya diambil dari backend
-  const canSee = session && session.dataAccess;
-  document.getElementById('table-title').innerHTML = `<span class="dot" style="background:var(--teal)"></span>${canSee ? 'Database Alumni' : 'Data alumni individu'}`;
+  // tabel alumni: butuh login ITS; isinya (umum / terbatas / lengkap) ditentukan backend
+  document.getElementById('table-title').innerHTML = '<span class="dot" style="background:var(--teal)"></span>Alumni';
   const tc = document.getElementById('table-content');
   if(!session) tc.innerHTML = lockNote('public');
-  else if(!canSee) tc.innerHTML = lockNote('staff');
   else { tc.innerHTML = '<div class="lock-note">Memuat data…</div>'; loadAlumni(); }
 
   if(session && session.level === 'FULL'){
