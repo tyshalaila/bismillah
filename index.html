@@ -382,10 +382,10 @@
           <div class="map-grid">
             <div class="map-wrap" id="map-slot"></div>
             <div class="map-side">
-              <div class="map-side-title">📍 Top provinsi (terdeteksi)</div>
+              <div class="map-side-title">📍 Top provinsi</div>
               <div id="province-list" class="province-list"></div>
-              <div class="map-side-empty" style="margin-top:8px;">Baru <b id="province-matched">-</b> dari 68 alumni yang kotanya kedeteksi — sisanya belum ketauan.</div>
-              <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;" onclick="alert('Tambahin kolom Kota/Provinsi di database alumni biar semua 68 orang bisa kepetakan.')">+ Lengkapi data lokasi</button>
+              <div class="map-side-empty" style="margin-top:8px;"><span id="province-note"></span></div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;" onclick="alert('Isi kolom Provinsi di sheet Alumni Umum (dan Alumni) agar semua alumni terpetakan.')">+ Lengkapi data lokasi</button>
             </div>
           </div>
           <div class="card-note">⚠️ Lokasi ditebak dari teks kolom Magang/Kerja, bukan kolom kota asli — baru sebagian alumni kedeteksi, posisinya juga nggak presisi.</div>
@@ -449,7 +449,7 @@
 <script>
 /* Data individu alumni & daftar pengurus TIDAK ada di file ini. Dilayani backend (lihat Code.gs).
    Yang tertanam hanya data agregat (jumlah), aman untuk publik. */
-const API_URL = "https://script.google.com/macros/s/AKfycby0aw2mdjfEUIbYTdcyJLZLh6uidcS4aV0lBaNzK8DeVoGMFANWNsqRAI0K8KtaE847Ug/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxXk1eB35z07pL9_zfQQ3JdzbtVA4phCE4nD3eOkYBDLXg-R8GISJRimOWEEhVymJDd/exec";
 const REQUEST_URL = "https://its.id/m/FormulirPermintaanDatabaseAlumni";
 const AGG = {"total":72,"bekerja":55,"magangOnly":16,"belum":1,"instansi":154,"depts":[{"name":"Departemen Statistika Bisnis","total":10,"bekerja":8,"magang":8},{"name":"Departemen Teknik Elektro Otomasi","total":11,"bekerja":7,"magang":11},{"name":"Departemen Teknik Infrastruktur Sipil","total":20,"bekerja":17,"magang":20},{"name":"Departemen Teknik Instrumentasi","total":7,"bekerja":4,"magang":6},{"name":"Departemen Teknik Kimia Industri","total":15,"bekerja":12,"magang":15},{"name":"Departemen Teknik Mesin Industri","total":9,"bekerja":7,"magang":9}],"companies":[["PT PLN (Persero)",5],["PT Pertamina Gas",1],["Bank Mandiri",0],["PT Honda Prospect Motor",1],["PT OTE Engineering Indonesia",1]]};
 
@@ -629,22 +629,41 @@ function renderFooter(){
 }
 
 /* ---------- Illustrative map ---------- */
+let PROV_LIVE = null;
+const PROV_XY = {
+  'aceh':[30,92],'sumatera utara':[46,99],'sumatera barat':[55,113],'riau':[72,110],'kepulauan riau':[110,96],'jambi':[87,118],'bengkulu':[78,128],
+  'sumatera selatan':[109,129],'kepulauan bangka belitung':[140,118],'lampung':[144,145],
+  'banten':[178,152],'dki jakarta':[186,148],'jawa barat':[190,154],'jawa tengah':[222,150],'di yogyakarta':[212,160],'jawa timur':[255,156],
+  'kalimantan barat':[195,92],'kalimantan tengah':[225,95],'kalimantan selatan':[240,112],'kalimantan timur':[255,80],'kalimantan utara':[258,62],
+  'bali':[300,150],'nusa tenggara barat':[322,152],'nusa tenggara timur':[355,158],
+  'sulawesi utara':[440,92],'gorontalo':[423,96],'sulawesi tengah':[410,100],'sulawesi barat':[395,112],'sulawesi selatan':[410,118],'sulawesi tenggara':[435,130],
+  'maluku':[470,115],'maluku utara':[478,95],
+  'papua barat daya':[492,92],'papua barat':[505,88],'papua':[545,92],'papua tengah':[528,98],'papua pegunungan':[548,104],'papua selatan':[556,118]
+};
+const PROV_ALIAS = { 'jakarta':'dki jakarta','yogyakarta':'di yogyakarta','daerah istimewa yogyakarta':'di yogyakarta','diy':'di yogyakarta','jogja':'di yogyakarta',
+  'kepri':'kepulauan riau','bangka belitung':'kepulauan bangka belitung','babel':'kepulauan bangka belitung','jatim':'jawa timur','jateng':'jawa tengah','jabar':'jawa barat','sumut':'sumatera utara','sumsel':'sumatera selatan','sumbar':'sumatera barat','ntb':'nusa tenggara barat','ntt':'nusa tenggara timur' };
+const normProv = s => { const k = String(s).toLowerCase().replace(/^provinsi\s+/,'').replace(/\s+/g,' ').trim(); return PROV_ALIAS[k] || k; };
+async function loadProvinsi(){
+  try { const r = await api({ action:'agregat' }); if(r.ok && r.terisi > 0){ PROV_LIVE = r; renderMap(); } } catch(e){}
+}
 function renderMap(){
   const slot = document.getElementById('map-slot');
-  // Provinsi terdeteksi dari keyword kota di kolom magang/kerja (data real, walau baru parsial)
-  const PROVINCES = [
-    { name:'Jawa Timur', count:21, x:255, y:156 },
-    { name:'Jawa Tengah', count:2, x:222, y:150 },
-    { name:'Jawa Barat', count:2, x:190, y:154 },
-    { name:'DI Yogyakarta', count:2, x:212, y:160 },
-    { name:'Bali', count:1, x:300, y:150 },
-    { name:'Sulawesi Selatan', count:1, x:410, y:118 },
-    { name:'Papua', count:1, x:545, y:92 },
-  ];
+  // Sumber: backend (jumlah per provinsi dari sheet "Alumni Umum"); cadangan: hasil deteksi kota lama
+  let PROVINCES, note;
+  if(PROV_LIVE){
+    PROVINCES = PROV_LIVE.provinsi.map(p => { const xy = PROV_XY[normProv(p.name)] || []; return { name:p.name, count:p.count, x:xy[0], y:xy[1] }; });
+    note = `<b>${PROV_LIVE.terisi}</b> dari ${PROV_LIVE.total} alumni sudah terisi provinsinya.`;
+  } else {
+    PROVINCES = [
+      { name:'Jawa Timur', count:21, x:255, y:156 }, { name:'Jawa Tengah', count:2, x:222, y:150 }, { name:'Jawa Barat', count:2, x:190, y:154 },
+      { name:'DI Yogyakarta', count:2, x:212, y:160 }, { name:'Bali', count:1, x:300, y:150 }, { name:'Sulawesi Selatan', count:1, x:410, y:118 }, { name:'Papua', count:1, x:545, y:92 },
+    ];
+    note = 'Perkiraan awal (provinsi terdeteksi dari teks kerja/magang). Data lengkap tampil setelah backend terhubung.';
+  }
   const matched = PROVINCES.reduce((s,p)=>s+p.count,0);
-  const maxC = Math.max(...PROVINCES.map(p=>p.count));
+  const maxC = Math.max(1, ...PROVINCES.map(p=>p.count));
 
-  const dotsSvg = PROVINCES.map(p => {
+  const dotsSvg = PROVINCES.filter(p => p.x !== undefined).map(p => {
     const r = 3 + (p.count/maxC)*9;
     return `<circle cx="${p.x}" cy="${p.y}" r="${r.toFixed(1)}" fill="#FE8002" opacity="0.85"/><circle cx="${p.x}" cy="${p.y}" r="${(r*1.9).toFixed(1)}" fill="#FE8002" opacity="0.18"/>`;
   }).join('');
@@ -653,7 +672,7 @@ function renderMap(){
   <svg viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet">
     <rect width="640" height="260" fill="#141210"/>
     <g fill="#2A2318" opacity="0.9">
-      <ellipse cx="90" cy="120" rx="70" ry="24" transform="rotate(-18 90 120)"/>
+      <ellipse cx="90" cy="120" rx="70" ry="24" transform="rotate(25 90 120)"/>
       <ellipse cx="230" cy="150" rx="55" ry="20" transform="rotate(-8 230 150)"/>
       <ellipse cx="330" cy="145" rx="40" ry="16"/>
       <ellipse cx="410" cy="120" rx="45" ry="30" transform="rotate(10 410 120)"/>
@@ -661,10 +680,10 @@ function renderMap(){
       <ellipse cx="230" cy="90" rx="46" ry="34" transform="rotate(4 230 90)"/>
     </g>
     ${dotsSvg}
-    <text x="12" y="248" fill="#6b6457" font-size="9" font-family="JetBrains Mono">Titik = provinsi terdeteksi dari teks kerja/magang (parsial)</text>
+    <text x="12" y="248" fill="#6b6457" font-size="9" font-family="JetBrains Mono">Titik = jumlah alumni per provinsi</text>
   </svg>`;
 
-  document.getElementById('province-matched').textContent = matched;
+  document.getElementById('province-note').innerHTML = note;
   const sorted = [...PROVINCES].sort((a,b)=>b.count-a.count);
   document.getElementById('province-list').innerHTML = sorted.map(p =>
     `<div class="province-row"><div class="pname"><span class="pdot"></span>${p.name}</div><div class="pval">${p.count} (${Math.round(p.count/matched*100)}%)</div></div>`
@@ -729,7 +748,7 @@ function renderGlobe(){
 const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function renderTable(data){
   const has = k => data.length && Object.prototype.hasOwnProperty.call(data[0], k);
-  const cols = [['nama','Nama'],['departemen','Departemen'],['magang','Magang'],['kerja','Kerja'],['posisi','Posisi'],['nrp','NRP'],['no. whatsapp','WhatsApp'],['linkedin','LinkedIn']].filter(([k]) => k==='nama' || has(k));
+  const cols = [['nama','Nama'],['departemen','Departemen'],['provinsi','Provinsi'],['magang','Magang'],['kerja','Kerja'],['posisi','Posisi'],['nrp','NRP'],['no. whatsapp','WhatsApp'],['linkedin','LinkedIn']].filter(([k]) => k==='nama' || has(k));
   const cell = (a,k) => {
     const v = esc(a[k]);
     if(k==='nama') return `<td><b>${v}</b></td>`;
@@ -887,6 +906,7 @@ function renderSettings(){
     <div class="bph-list">${st.full.map(n => `<span class="bph-chip">${n}</span>`).join('')}</div>`;
 }
 
+loadProvinsi();
 showApp();  // mode publik langsung tampil; login internal bersifat opsional
 </script>
 </body>
